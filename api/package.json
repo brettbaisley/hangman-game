@@ -1,0 +1,19 @@
+{
+  "name": "hangman-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "func start",
+    "watch": "tsc -w -p tsconfig.json"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.7.4",
+    "@hangman/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

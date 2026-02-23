@@ -1,0 +1,19 @@
+{
+  "name": "hangman-game",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "web",
+    "api",
+    "shared"
+  ],
+  "scripts": {
+    "build": "npm run build -w shared && npm run build -w api && npm run build -w web",
+    "build:web": "npm run build -w web",
+    "build:api": "npm run build -w shared && npm run build -w api",
+    "dev:web": "npm run dev -w web",
+    "dev:api": "npm run build:api && npm run start -w api",
+    "dev:swa": "npx concurrently -k -n API,SWA -c cyan,magenta \"npm run dev:api\" \"npx @azure/static-web-apps-cli@latest start http://localhost:5173 --api-devserver-url http://localhost:7071 --run \\\"npm run dev:web\\\"\"",
+    "lint:web": "npm run lint -w web"
+  }
+}

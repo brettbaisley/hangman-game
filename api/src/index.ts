@@ -1,0 +1,9 @@
+import "./functions/health.js";
+import "./functions/startSinglePlayer.js";
+import "./functions/guessSinglePlayer.js";
+import "./functions/getSinglePlayerState.js";
+import "./functions/createMultiplayerMatch.js";
+import "./functions/joinMultiplayerMatch.js";
+import "./functions/guessMultiplayer.js";
+import "./functions/getMultiplayerState.js";
+import "./functions/getMultiplayerResult.js";

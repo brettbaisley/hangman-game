@@ -1,0 +1,48 @@
+.app-shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+.panel {
+  border: 1px solid #2f2f2f;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.word {
+  font-size: 2rem;
+  letter-spacing: 0.15em;
+  margin: 0.5rem 0;
+}
+
+.guess-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.inline-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 0.5rem;
+}
+
+.error {
+  color: #d33;
+}

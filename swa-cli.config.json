@@ -1,0 +1,12 @@
+{
+  "configurations": {
+    "hangman-game": {
+      "appLocation": "web",
+      "apiLocation": "api",
+      "outputLocation": "dist",
+      "appBuildCommand": "npm run build:web",
+      "apiBuildCommand": "npm run build:api",
+      "run": "npm run dev:web"
+    }
+  }
+}
