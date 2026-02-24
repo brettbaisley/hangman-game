@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { startSinglePlayer, submitSinglePlayerGuess } from '../api'
 import type { RoundState } from '../api'
 
 function SinglePlayerPage() {
+  const navigate = useNavigate()
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy')
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [state, setState] = useState<RoundState | null>(null)
@@ -51,6 +52,15 @@ function SinglePlayerPage() {
       setState(response.state)
       setGuess('')
       setFeedback(`Guess '${response.letter}': ${response.code}`)
+
+      if (response.state.status !== 'in_progress') {
+        navigate('/result', {
+          state: {
+            mode: 'single',
+            state: response.state,
+          },
+        })
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Failed to submit guess')
     } finally {
@@ -110,6 +120,21 @@ function SinglePlayerPage() {
         </form>
         {feedback ? <p>{feedback}</p> : null}
         {error ? <p className="error">{error}</p> : null}
+        {state && state.status !== 'in_progress' ? (
+          <button
+            type="button"
+            onClick={() =>
+              navigate('/result', {
+                state: {
+                  mode: 'single',
+                  state,
+                },
+              })
+            }
+          >
+            View Result
+          </button>
+        ) : null}
       </section>
     </main>
   )

@@ -43,7 +43,7 @@ function LandingPage({ isAuthLoading, isAuthenticated, userDisplayName }: Landin
             Start 1 Player Game
           </Link>
           {isAuthenticated ? (
-            <Link to="/multiplayer" className="nav-link-button">
+            <Link to="/multiplayer/lobby" className="nav-link-button">
               Start Multiplayer Game
             </Link>
           ) : (
