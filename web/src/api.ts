@@ -82,7 +82,12 @@ export interface MultiplayerSignalRConnectionInfo {
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null
-    throw new Error(errorPayload?.error ?? 'Request failed')
+    if (errorPayload?.error) {
+      throw new Error(errorPayload.error)
+    }
+
+    const fallbackMessage = (await response.text().catch(() => '')).trim()
+    throw new Error(`Request failed (${response.status}${fallbackMessage ? `: ${fallbackMessage.slice(0, 120)}` : ''})`)
   }
 
   return (await response.json()) as T
