@@ -1,6 +1,13 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import { app, HttpRequest, HttpResponseInit, InvocationContext, output } from "@azure/functions";
 import { submitMultiplayerGuess } from "@hangman/shared";
 import { getMultiplayerMatch, saveMultiplayerMatch } from "../store.js";
+
+const signalROutput = output.generic({
+  type: "signalR",
+  name: "signalRMessages",
+  hubName: "hangman",
+  connectionStringSetting: "AzureSignalRConnectionString",
+});
 
 interface GuessMatchBody {
   matchId?: string;
@@ -63,6 +70,21 @@ export async function guessMultiplayerHandler(request: HttpRequest, _context: In
   const outcome = submitMultiplayerGuess(match, playerId, letter);
   saveMultiplayerMatch(match);
 
+  _context.extraOutputs.set(signalROutput, [
+    {
+      target: "multiplayerGuessSubmitted",
+      arguments: [
+        {
+          matchId,
+          playerId,
+          letter: outcome.letter,
+          code: outcome.code,
+          status: outcome.state.status,
+        },
+      ],
+    },
+  ]);
+
   return {
     status: 200,
     jsonBody: {
@@ -77,5 +99,6 @@ app.http("multiplayer-guess", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "multiplayer/guess",
+  extraOutputs: [signalROutput],
   handler: guessMultiplayerHandler,
 });

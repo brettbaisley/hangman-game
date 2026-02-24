@@ -7,3 +7,5 @@ import "./functions/joinMultiplayerMatch.js";
 import "./functions/guessMultiplayer.js";
 import "./functions/getMultiplayerState.js";
 import "./functions/getMultiplayerResult.js";
+import "./functions/negotiateMultiplayer.js";
+import "./functions/testMultiplayerSignalR.js";

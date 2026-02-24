@@ -2,6 +2,7 @@
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "node"
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureSignalRConnectionString": "Endpoint=https://<your-signalr-name>.service.signalr.net;AccessKey=<your-key>;Version=1.0;"
   }
 }

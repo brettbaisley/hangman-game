@@ -38,6 +38,8 @@ If the frontend loads but API calls fail:
 - `GET /api/singleplayer/state/{sessionId}`
 - `POST /api/multiplayer/create`
 - `POST /api/multiplayer/join`
+- `POST /api/multiplayer/negotiate`
+- `POST /api/multiplayer/signalr/test`
 - `POST /api/multiplayer/guess`
 - `GET /api/multiplayer/state/{matchId}/{playerId}`
 - `GET /api/multiplayer/result/{matchId}/{playerId}`

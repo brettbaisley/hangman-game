@@ -74,6 +74,11 @@ export interface GuessMultiplayerResponse {
   state: MultiplayerPublicState
 }
 
+export interface MultiplayerSignalRConnectionInfo {
+  url: string
+  accessToken: string
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null
@@ -132,6 +137,31 @@ export async function joinMultiplayerMatch(matchId: string, playerId: string): P
   })
 
   return handleResponse<JoinMultiplayerResponse>(response)
+}
+
+export async function negotiateMultiplayerConnection(playerId: string): Promise<MultiplayerSignalRConnectionInfo> {
+  const response = await fetch('/api/multiplayer/negotiate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-player-id': playerId,
+    },
+    body: JSON.stringify({ playerId }),
+  })
+
+  return handleResponse<MultiplayerSignalRConnectionInfo>(response)
+}
+
+export async function sendMultiplayerSignalRTest(matchId: string): Promise<{ ok: boolean; matchId: string }> {
+  const response = await fetch('/api/multiplayer/signalr/test', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ matchId }),
+  })
+
+  return handleResponse<{ ok: boolean; matchId: string }>(response)
 }
 
 export async function submitMultiplayerGuess(

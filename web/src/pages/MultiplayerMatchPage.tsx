@@ -1,8 +1,24 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { getMultiplayerState, submitMultiplayerGuess } from '../api'
+import { getMultiplayerState, negotiateMultiplayerConnection, sendMultiplayerSignalRTest, submitMultiplayerGuess } from '../api'
 import type { MultiplayerPublicState } from '../api'
+
+interface MultiplayerGuessSignalREvent {
+  matchId: string
+  playerId: string
+  letter: string
+  code: 'correct' | 'wrong' | 'duplicate' | 'invalid'
+  status: 'waiting_for_opponent' | 'in_progress' | 'ended'
+}
+
+interface MultiplayerSignalRTestEvent {
+  matchId: string
+  sentAt: string
+}
+
+type RealtimeConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
 
 function MultiplayerMatchPage() {
   const navigate = useNavigate()
@@ -15,6 +31,9 @@ function MultiplayerMatchPage() {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
   const [multiplayerFeedback, setMultiplayerFeedback] = useState<string | null>(null)
   const [multiplayerError, setMultiplayerError] = useState<string | null>(null)
+  const [realtimeStatus, setRealtimeStatus] = useState<string | null>(null)
+  const [realtimeTestStatus, setRealtimeTestStatus] = useState<string | null>(null)
+  const [realtimeConnectionState, setRealtimeConnectionState] = useState<RealtimeConnectionState>('connecting')
   const [isMultiplayerLoading, setIsMultiplayerLoading] = useState(false)
 
   const canSubmitMultiplayerGuess =
@@ -42,6 +61,15 @@ function MultiplayerMatchPage() {
       setCopyFeedback('Match ID copied.')
     } catch {
       setCopyFeedback('Unable to copy match ID.')
+    }
+  }
+
+  async function onSendRealtimeTestEvent() {
+    try {
+      await sendMultiplayerSignalRTest(matchId)
+      setRealtimeTestStatus('Realtime test event sent. Waiting for receipt...')
+    } catch (requestError) {
+      setRealtimeTestStatus(requestError instanceof Error ? `Realtime test failed: ${requestError.message}` : 'Realtime test failed')
     }
   }
 
@@ -96,6 +124,109 @@ function MultiplayerMatchPage() {
     void onRefreshMultiplayerState()
   }, [])
 
+  useEffect(() => {
+    if (!matchId || !playerId) {
+      return
+    }
+
+    setRealtimeConnectionState('connecting')
+    let isActive = true
+    let cleanup: (() => Promise<void>) | undefined
+
+    async function startSignalR() {
+      try {
+        const connectionInfo = await negotiateMultiplayerConnection(playerId)
+        if (!isActive) {
+          return
+        }
+
+        const connection = new HubConnectionBuilder()
+          .withUrl(connectionInfo.url, {
+            accessTokenFactory: () => connectionInfo.accessToken,
+          })
+          .withAutomaticReconnect()
+          .configureLogging(LogLevel.Warning)
+          .build()
+
+        connection.onreconnecting(() => {
+          setRealtimeConnectionState('reconnecting')
+          setRealtimeStatus('Reconnecting real-time updates...')
+        })
+
+        connection.onreconnected(() => {
+          setRealtimeConnectionState('connected')
+          setRealtimeStatus('Real-time match updates connected.')
+        })
+
+        connection.onclose(() => {
+          setRealtimeConnectionState('disconnected')
+          setRealtimeStatus('Real-time updates disconnected. Use Refresh State.')
+        })
+
+        const onGuessSubmitted = (event: MultiplayerGuessSignalREvent) => {
+          if (event.matchId !== matchId || event.playerId === playerId) {
+            return
+          }
+
+          setRealtimeStatus(`Opponent guessed '${event.letter}' (${event.code}). Refreshing state...`)
+          void onRefreshMultiplayerState()
+        }
+
+        const onSignalRTest = (event: MultiplayerSignalRTestEvent) => {
+          if (event.matchId !== matchId) {
+            return
+          }
+
+          setRealtimeTestStatus(`Realtime test event received at ${new Date().toLocaleTimeString()}.`)
+        }
+
+        connection.on('multiplayerGuessSubmitted', onGuessSubmitted)
+        connection.on('multiplayerSignalRTest', onSignalRTest)
+        const detachHandler = () => {
+          connection.off('multiplayerGuessSubmitted', onGuessSubmitted)
+          connection.off('multiplayerSignalRTest', onSignalRTest)
+        }
+
+        await connection.start()
+        if (!isActive) {
+          detachHandler()
+          await connection.stop()
+          return
+        }
+
+        setRealtimeConnectionState('connected')
+        setRealtimeStatus('Real-time match updates connected.')
+
+        cleanup = async () => {
+          detachHandler()
+          await connection.stop()
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'unknown error'
+        if (isActive) {
+          setRealtimeConnectionState('disconnected')
+          setRealtimeStatus(`Real-time updates unavailable (${message}). Use Refresh State.`)
+        }
+      }
+    }
+
+    void startSignalR()
+
+    return () => {
+      isActive = false
+      if (cleanup) {
+        void cleanup()
+      }
+    }
+  }, [matchId, playerId])
+
+  function realtimeStatusLabel() {
+    if (realtimeConnectionState === 'connected') return 'Connected'
+    if (realtimeConnectionState === 'reconnecting') return 'Reconnecting'
+    if (realtimeConnectionState === 'disconnected') return 'Disconnected'
+    return 'Connecting'
+  }
+
   if (!matchId || !playerId) {
     return (
       <main className="app-shell">
@@ -114,7 +245,10 @@ function MultiplayerMatchPage() {
     <main className="app-shell">
       <section className="panel">
         <div className="panel-header">
-          <h1>Multiplayer Match</h1>
+          <div className="header-with-badge">
+            <h1>Multiplayer Match</h1>
+            <span className={`status-badge status-badge-${realtimeConnectionState}`}>Realtime: {realtimeStatusLabel()}</span>
+          </div>
           <div className="inline-controls">
             <Link to={`/multiplayer/lobby?playerId=${encodeURIComponent(playerId)}`} className="nav-link-button">
               Back to Lobby
@@ -131,6 +265,9 @@ function MultiplayerMatchPage() {
           </button>
           <button type="button" onClick={onCopyMatchId}>
             Copy Match ID
+          </button>
+          <button type="button" onClick={onSendRealtimeTestEvent}>
+            Send Realtime Test Event
           </button>
         </div>
 
@@ -176,6 +313,8 @@ function MultiplayerMatchPage() {
           </button>
         ) : null}
 
+        {realtimeStatus ? <p>{realtimeStatus}</p> : null}
+        {realtimeTestStatus ? <p>{realtimeTestStatus}</p> : null}
         {copyFeedback ? <p>{copyFeedback}</p> : null}
         {multiplayerFeedback ? <p>{multiplayerFeedback}</p> : null}
         {multiplayerError ? <p className="error">{multiplayerError}</p> : null}
