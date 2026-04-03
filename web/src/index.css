@@ -507,15 +507,16 @@ body {
   }
 
   .board-grid {
-    grid-template-columns: 130px 1fr;
-    align-items: start;
+    grid-template-columns: 1fr;
   }
 
-  /* gallows panel: no padding, borderless, just the SVG */
+  /* gallows panel: no padding, borderless, constrained + centered */
   .board-grid > .panel:first-child {
     background: transparent;
     border: none;
     padding: 0;
+    max-width: 160px;
+    margin: 0 auto;
   }
 
   .board-grid > .panel:first-child .panel-title {
