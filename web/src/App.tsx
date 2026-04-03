@@ -1,63 +1,121 @@
-import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
-import './App.css'
-import { getAuthenticatedUser } from './auth'
-import LandingPage from './pages/LandingPage'
-import MultiplayerLobbyPage from './pages/MultiplayerLobbyPage'
-import MultiplayerMatchPage from './pages/MultiplayerMatchPage'
-import ResultPage from './pages/ResultPage'
-import SinglePlayerPage from './pages/SinglePlayerPage'
+import { useEffect, useMemo, useState } from 'react'
+import { AlphabetGrid } from './components/AlphabetGrid'
+import { GameOverModal } from './components/GameOverModal'
+import { HangmanDrawing } from './components/HangmanDrawing'
+import { SecretWordForm } from './components/SecretWordForm'
+import { WordDisplay } from './components/WordDisplay'
+import { useHangmanGame } from './hooks/useHangmanGame'
+import { toLetterOrNull } from './lib/hangman'
 
 function App() {
-  const [isAuthLoading, setIsAuthLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [userDisplayName, setUserDisplayName] = useState<string | null>(null)
+  const [secretWord, setSecretWord] = useState('')
+  const {
+    guessLetter,
+    guessedLetterSet,
+    guessedLetters,
+    incorrectGuesses,
+    remainingGuesses,
+    resetGame,
+    revealedCharacters,
+    status,
+  } = useHangmanGame(secretWord)
+
+  const roundStarted = secretWord.length > 0
+  const gameOver = roundStarted && status !== 'playing'
+  const latestGuessedLetter = guessedLetters[guessedLetters.length - 1] ?? null
+
+  const statusMessage = useMemo(() => {
+    if (!roundStarted) {
+      return 'Enter a secret word to begin.'
+    }
+
+    if (status === 'won') {
+      return 'Round complete. The guesser won.'
+    }
+
+    if (status === 'lost') {
+      return 'Round complete. The guesser lost.'
+    }
+
+    return `Round active. ${remainingGuesses} misses remaining.`
+  }, [remainingGuesses, roundStarted, status])
 
   useEffect(() => {
-    let isActive = true
+    if (!roundStarted || gameOver) {
+      return
+    }
 
-    async function loadAuthState() {
-      try {
-        const user = await getAuthenticatedUser()
-        if (!isActive) return
-        setIsAuthenticated(Boolean(user))
-        setUserDisplayName(user?.userDetails ?? null)
-      } finally {
-        if (isActive) {
-          setIsAuthLoading(false)
-        }
+    function handleKeyboardGuess(event: KeyboardEvent) {
+      const letter = toLetterOrNull(event.key)
+      if (!letter) {
+        return
       }
+
+      event.preventDefault()
+      guessLetter(letter)
     }
 
-    void loadAuthState()
-
+    window.addEventListener('keydown', handleKeyboardGuess)
     return () => {
-      isActive = false
+      window.removeEventListener('keydown', handleKeyboardGuess)
     }
-  }, [])
+  }, [gameOver, guessLetter, roundStarted])
+
+  function handleStartRound(nextSecretWord: string) {
+    resetGame()
+    setSecretWord(nextSecretWord)
+  }
+
+  function handlePlayAgain() {
+    resetGame()
+    setSecretWord('')
+  }
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={<LandingPage isAuthLoading={isAuthLoading} isAuthenticated={isAuthenticated} userDisplayName={userDisplayName} />}
-      />
-      <Route path="/single" element={<SinglePlayerPage />} />
-      <Route path="/result" element={<ResultPage />} />
-      <Route
-        path="/multiplayer"
-        element={isAuthenticated ? <Navigate to="/multiplayer/lobby" replace /> : <Navigate to="/" replace />}
-      />
-      <Route
-        path="/multiplayer/lobby"
-        element={isAuthenticated ? <MultiplayerLobbyPage defaultPlayerId={userDisplayName ?? 'player-1'} /> : <Navigate to="/" replace />}
-      />
-      <Route
-        path="/multiplayer/match"
-        element={isAuthenticated ? <MultiplayerMatchPage /> : <Navigate to="/" replace />}
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <main className="app-shell">
+      <div className="ambient-glow" aria-hidden="true" />
+
+      {!roundStarted ? (
+        <SecretWordForm onStart={handleStartRound} />
+      ) : (
+        <section className="game-layout">
+          <header className="game-header">
+            <h1 className="title">Neon Gallows</h1>
+            <p className="subtitle">Guess the hidden letters before six misses.</p>
+          </header>
+
+          <div className="stats-strip" aria-live="polite">
+            <p className="stat-pill">Letters used: {guessedLetters.length}</p>
+            <p className="stat-pill">Incorrect guesses: {incorrectGuesses}/6</p>
+            <p className="stat-pill">Misses remaining: {remainingGuesses}</p>
+          </div>
+
+          <WordDisplay characters={revealedCharacters} latestGuessedLetter={latestGuessedLetter} />
+
+          <div className="board-grid">
+            <HangmanDrawing misses={incorrectGuesses} />
+            <AlphabetGrid
+              guessedLetters={guessedLetterSet}
+              latestGuessedLetter={latestGuessedLetter}
+              onGuess={guessLetter}
+              disabled={gameOver}
+            />
+          </div>
+
+          <p className="sr-only" aria-live="polite">
+            {statusMessage}
+          </p>
+        </section>
+      )}
+
+      {gameOver && (
+        <GameOverModal
+          status={status}
+          secretWord={secretWord}
+          onPlayAgain={handlePlayAgain}
+        />
+      )}
+    </main>
   )
 }
 
