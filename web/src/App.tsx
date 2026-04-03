@@ -85,9 +85,9 @@ function App() {
           </header>
 
           <div className="stats-strip" aria-live="polite">
-            <p className="stat-pill">Letters used: {guessedLetters.length}</p>
-            <p className="stat-pill">Incorrect guesses: {incorrectGuesses}/6</p>
-            <p className="stat-pill">Misses remaining: {remainingGuesses}</p>
+            <div className="stat-pill"><span className="stat-label">Letters used</span><span className="stat-value">{guessedLetters.length}</span></div>
+            <div className="stat-pill"><span className="stat-label">Incorrect</span><span className="stat-value">{incorrectGuesses}/6</span></div>
+            <div className="stat-pill"><span className="stat-label">Remaining</span><span className="stat-value">{remainingGuesses}</span></div>
           </div>
 
           <WordDisplay characters={revealedCharacters} latestGuessedLetter={latestGuessedLetter} />
