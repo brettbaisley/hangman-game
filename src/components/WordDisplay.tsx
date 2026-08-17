@@ -6,8 +6,6 @@ type WordDisplayProps = {
 }
 
 export function WordDisplay({ characters, latestGuessedLetter }: WordDisplayProps) {
-  let revealIndex = 0
-
   return (
     <section className="word-section" aria-label="Word to guess">
       <h2 className="panel-title">Word to guess</h2>
@@ -23,11 +21,14 @@ export function WordDisplay({ characters, latestGuessedLetter }: WordDisplayProp
 
           const isNewlyRevealed =
             character.isRevealed && latestGuessedLetter !== null && toLetterOrNull(character.char) === latestGuessedLetter
-          const revealDelay = revealIndex * 90
-
-          if (isNewlyRevealed) {
-            revealIndex += 1
-          }
+          const revealDelay = characters
+            .slice(0, index)
+            .filter(
+              (previousCharacter) =>
+                previousCharacter.isRevealed &&
+                latestGuessedLetter !== null &&
+                toLetterOrNull(previousCharacter.char) === latestGuessedLetter,
+            ).length * 90
 
           return (
             <span key={`${character.char}-${index}`} className="letter-slot">
