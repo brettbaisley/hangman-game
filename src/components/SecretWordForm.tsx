@@ -31,8 +31,9 @@ export function SecretWordForm({ onStart }: SecretWordFormProps) {
 
   return (
     <form className="entry-card" onSubmit={handleSubmit}>
+      <p className="eyebrow">A two-player word game</p>
       <h1 className="title">Neon Gallows</h1>
-      <p className="subtitle">Enter a secret word or phrase using letters only, then pass the device.</p>
+      <p className="subtitle">Set a secret phrase, pass the device, and let the guessing begin.</p>
 
       <label className="field-label" htmlFor="secretWord">
         Secret word or phrase
@@ -67,7 +68,7 @@ export function SecretWordForm({ onStart }: SecretWordFormProps) {
       )}
 
       <button className="primary-button" type="submit">
-        Start Round
+        Begin the round <span aria-hidden="true">→</span>
       </button>
 
       <ul className="rules-list" aria-label="How to play">
