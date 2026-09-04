@@ -1,24 +1,2 @@
-type HangmanDrawingProps = {
-  misses: number
-}
-
-export function HangmanDrawing({ misses }: HangmanDrawingProps) {
-  return (
-    <section className="panel" aria-label="Hangman drawing">
-      <h2 className="panel-title">Gallows</h2>
-      <svg className="hangman-svg" viewBox="0 0 220 240" role="img" aria-label={`Incorrect guesses: ${misses} out of 6`}>
-        <line x1="20" y1="220" x2="200" y2="220" className="wood" />
-        <line x1="58" y1="220" x2="58" y2="28" className="wood" />
-        <line x1="58" y1="28" x2="142" y2="28" className="wood" />
-        <line x1="142" y1="28" x2="142" y2="55" className="wood" />
-
-        {misses > 0 && <circle cx="142" cy="76" r="20" pathLength="1" className="body-part body-part-head" />}
-        {misses > 1 && <line x1="142" y1="96" x2="142" y2="148" pathLength="1" className="body-part" />}
-        {misses > 2 && <line x1="142" y1="114" x2="116" y2="134" pathLength="1" className="body-part" />}
-        {misses > 3 && <line x1="142" y1="114" x2="168" y2="134" pathLength="1" className="body-part" />}
-        {misses > 4 && <line x1="142" y1="148" x2="120" y2="184" pathLength="1" className="body-part" />}
-        {misses > 5 && <line x1="142" y1="148" x2="164" y2="184" pathLength="1" className="body-part" />}
-      </svg>
-    </section>
-  )
-}
+import styles from './HangmanDrawing.module.css'
+export function HangmanDrawing({ misses }: { misses: number }) { return <section className={styles.drawing} aria-label={`Hangman drawing: ${misses} incorrect guesses`}><svg viewBox="0 0 220 250" role="img"><title>Hangman drawing</title><path className={styles.gallows} d="M24 228h174M60 228V25h94v34M60 25h94" />{misses >= 1 && <circle className={styles.person} cx="154" cy="79" r="20" />}{misses >= 2 && <path className={styles.person} d="M154 99v59" />}{misses >= 3 && <path className={styles.person} d="m154 116-31 27" />}{misses >= 4 && <path className={styles.person} d="m154 116 31 27" />}{misses >= 5 && <path className={styles.person} d="m154 158-28 42" />}{misses >= 6 && <path className={styles.person} d="m154 158 28 42" />}</svg></section> }

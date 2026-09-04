@@ -1,132 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
-import { AlphabetGrid } from './components/AlphabetGrid'
-import { GameOverModal } from './components/GameOverModal'
+import { useCallback, useEffect, useState } from 'react'
+import words from './data/words.json'
+import { AnswerDisplay } from './components/AnswerDisplay'
+import { GameKeyboard } from './components/GameKeyboard'
 import { HangmanDrawing } from './components/HangmanDrawing'
-import { SecretWordForm } from './components/SecretWordForm'
-import { WordDisplay } from './components/WordDisplay'
-import { useHangmanGame } from './hooks/useHangmanGame'
-import { toLetterOrNull } from './lib/hangman'
+import { GameOverlay } from './components/GameOverlay'
+import { createGame, guess, type HangmanGameState } from './game/hangmanGame'
+import { selectWord } from './game/wordSelection'
+import styles from './App.module.css'
 
-function App() {
-  const [secretWord, setSecretWord] = useState('')
-  const {
-    guessLetter,
-    guessedLetterSet,
-    guessedLetters,
-    incorrectGuesses,
-    remainingGuesses,
-    resetGame,
-    revealedCharacters,
-    status,
-  } = useHangmanGame(secretWord)
+const testAnswer = new URLSearchParams(window.location.search).get('answer')
+function nextAnswer(previousAnswer?: string) { return testAnswer ?? selectWord(words.entries, previousAnswer) }
 
-  const roundStarted = secretWord.length > 0
-  const gameOver = roundStarted && status !== 'playing'
-  const latestGuessedLetter = guessedLetters[guessedLetters.length - 1] ?? null
-  const progress = Math.round((incorrectGuesses / 6) * 100)
-
-  const statusMessage = useMemo(() => {
-    if (!roundStarted) {
-      return 'Enter a secret word to begin.'
-    }
-
-    if (status === 'won') {
-      return 'Round complete. The guesser won.'
-    }
-
-    if (status === 'lost') {
-      return 'Round complete. The guesser lost.'
-    }
-
-    return `Round active. ${remainingGuesses} misses remaining.`
-  }, [remainingGuesses, roundStarted, status])
-
-  useEffect(() => {
-    if (!roundStarted || gameOver) {
-      return
-    }
-
-    function handleKeyboardGuess(event: KeyboardEvent) {
-      const letter = toLetterOrNull(event.key)
-      if (!letter) {
-        return
-      }
-
-      event.preventDefault()
-      guessLetter(letter)
-    }
-
-    window.addEventListener('keydown', handleKeyboardGuess)
-    return () => {
-      window.removeEventListener('keydown', handleKeyboardGuess)
-    }
-  }, [gameOver, guessLetter, roundStarted])
-
-  function handleStartRound(nextSecretWord: string) {
-    resetGame()
-    setSecretWord(nextSecretWord)
-  }
-
-  function handlePlayAgain() {
-    resetGame()
-    setSecretWord('')
-  }
-
-  return (
-    <main className="app-shell">
-      <div className="ambient-glow" aria-hidden="true" />
-
-      {!roundStarted ? (
-        <SecretWordForm onStart={handleStartRound} />
-      ) : (
-        <section className="game-layout">
-          <header className="game-header">
-            <p className="eyebrow">Private-pass game · Round in progress</p>
-            <div className="title-row">
-              <h1 className="title">Neon Gallows</h1>
-              <span className="round-badge">01</span>
-            </div>
-            <p className="subtitle">Read the room. Find the phrase. Keep the signal alive.</p>
-          </header>
-
-          <div className="stats-strip" aria-live="polite">
-            <div className="stat-pill"><span className="stat-label">Letters played</span><span className="stat-value">{guessedLetters.length.toString().padStart(2, '0')}</span></div>
-            <div className="stat-pill stat-pill--danger"><span className="stat-label">Misses</span><span className="stat-value">{incorrectGuesses}/6</span></div>
-            <div className="stat-pill"><span className="stat-label">Chances left</span><span className="stat-value">{remainingGuesses}</span></div>
-          </div>
-
-          <div className="risk-meter" aria-label={`${incorrectGuesses} of 6 chances used`}>
-            <span className="risk-meter-label">Signal stability</span>
-            <span className="risk-meter-track"><span className="risk-meter-fill" style={{ width: `${progress}%` }} /></span>
-          </div>
-
-          <WordDisplay characters={revealedCharacters} latestGuessedLetter={latestGuessedLetter} />
-
-          <div className="board-grid">
-            <HangmanDrawing misses={incorrectGuesses} />
-            <AlphabetGrid
-              guessedLetters={guessedLetterSet}
-              latestGuessedLetter={latestGuessedLetter}
-              onGuess={guessLetter}
-              disabled={gameOver}
-            />
-          </div>
-
-          <p className="sr-only" aria-live="polite">
-            {statusMessage}
-          </p>
-        </section>
-      )}
-
-      {gameOver && (
-        <GameOverModal
-          status={status}
-          secretWord={secretWord}
-          onPlayAgain={handlePlayAgain}
-        />
-      )}
-    </main>
-  )
+export default function App() {
+  const [screen, setScreen] = useState<'home' | 'game'>('home')
+  const [previousAnswer, setPreviousAnswer] = useState<string | undefined>()
+  const [game, setGame] = useState<HangmanGameState>(() => createGame(nextAnswer()))
+  const [confirmingNewGame, setConfirmingNewGame] = useState(false)
+  const startGame = useCallback(() => { const answer = nextAnswer(previousAnswer); setPreviousAnswer(answer); setGame(createGame(answer)); setConfirmingNewGame(false); setScreen('game') }, [previousAnswer])
+  const makeGuess = useCallback((letter: string) => setGame((current) => guess(current, letter)), [])
+  useEffect(() => { if (screen !== 'game' || game.status !== 'playing') return; const onKeyDown = (event: KeyboardEvent) => { if (/^[a-z]$/i.test(event.key)) { event.preventDefault(); makeGuess(event.key) } }; window.addEventListener('keydown', onKeyDown); return () => window.removeEventListener('keydown', onKeyDown) }, [game.status, makeGuess, screen])
+  function goHome() { setConfirmingNewGame(false); setScreen('home') }
+  return <main className={styles.app}>{screen === 'home' ? <section className={styles.home} aria-labelledby="home-title"><div className={styles.homeArt} aria-hidden="true"><span>?</span></div><p className={styles.kicker}>A word game for bright minds</p><h1 id="home-title">Hangman</h1><p className={styles.homeCopy}>Guess the secret word before the drawing is complete.</p><button className={styles.playButton} type="button" onClick={startGame}>Play <span aria-hidden="true">→</span></button></section> : <section className={styles.game} aria-label="Hangman game"><header className={styles.topBar}><button className={styles.textButton} type="button" onClick={goHome}>Home</button><p className={styles.misses} aria-live="polite"><span aria-hidden="true">♥</span> Misses {game.incorrectGuesses}/6</p><button className={styles.textButton} type="button" onClick={() => game.status === 'playing' ? setConfirmingNewGame(true) : startGame()}>New Game</button></header><div className={styles.board}><HangmanDrawing misses={game.incorrectGuesses} /><AnswerDisplay answer={game.answer} guessedLetters={game.guessedLetters} revealAll={game.status === 'lost'} /></div><GameKeyboard guessedLetters={game.guessedLetters} answer={game.answer} disabled={game.status !== 'playing'} onGuess={makeGuess} />{confirmingNewGame && <div className={styles.confirmBackdrop} role="presentation"><section className={styles.confirm} role="dialog" aria-modal="true" aria-labelledby="new-game-title"><h2 id="new-game-title">Start new game?</h2><p>Your current word will be abandoned.</p><div><button className={styles.secondaryButton} type="button" onClick={() => setConfirmingNewGame(false)}>No</button><button className={styles.playButton} type="button" onClick={startGame}>Yes</button></div></section></div>}{game.status !== 'playing' && <GameOverlay game={game} onPlayAgain={startGame} />}</section>}</main>
 }
-
-export default App
