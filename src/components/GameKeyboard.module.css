@@ -1,0 +1,1 @@
+.keyboard { display:grid; gap:.35rem; justify-items:center; padding-top:.15rem; }.row { display:flex; justify-content:center; gap:clamp(.18rem,1vw,.48rem); }
